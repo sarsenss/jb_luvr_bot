@@ -17,7 +17,8 @@ updater = Updater(token)
 
 def main_func(update, context):
     chat = update.effective_chat
-    if not Employee.objects.filter(chat_id=chat.id):
+    has_contact_in_message = hasattr(update, 'message') and hasattr(update.message, 'contact') and hasattr(update.message.contact, 'phone_number')
+    if not Employee.objects.filter(chat_id=chat.id).exists() and not has_contact_in_message:
         phone_button = KeyboardButton(text='Отправить номер телефона', request_contact=True)
         context.bot.send_message(chat_id=chat.id,
                                  text=f'Пожалуйста, отправьте мне свой номер телефона для регистрации '
@@ -25,11 +26,15 @@ def main_func(update, context):
                                  reply_markup=ReplyKeyboardMarkup([[phone_button]]))
         return
 
-    if hasattr(update, 'message') and hasattr(update.message, 'contact') and hasattr(update.message.contact, 'phone_number'):
+    if has_contact_in_message:
+        # TODO find employee by phone number. If exists - set chat_id and save. If not exists - create with chat_id and phone number
         phone_number = update.message.contact.phone_number
-        employee = Employee.objects.get(chat_id=chat.id)
-        employee.phone_number = phone_number
-        employee.save()
+        if Employee.objects.filter(phone_number=phone_number).exists():
+            employee = Employee.objects.get(phone_number=phone_number)
+            employee.chat_id = chat.id
+            employee.save()
+        else:
+            Employee.objects.create(chat_id=chat.id, phone_number=phone_number)
         location_button = KeyboardButton(text='Начать смену', request_location=True)
         context.bot.send_message(chat_id=chat.id, text='Спасибо, что поделились номером телефона!\n'
                                                        'Для начала смены нажмите кнопку "Начать смену"',
@@ -39,6 +44,14 @@ def main_func(update, context):
     if hasattr(update, 'message') and hasattr(update.message, 'location'):
 
         employee = Employee.objects.get(chat_id=chat.id)
+
+        # TODO to handle assignment not exist error
+
+        if not JobRequestAssignment.objects.get(employee=employee).exists():
+            context.bot.send_message(chat_id=chat.id, text='Для вас не была назначена заявка на смену.'
+                                                           '\nОбратитесь к менеджеру.')
+            return
+
         # TODO ensure its today's assignment
         assignment = JobRequestAssignment.objects.get(employee=employee)
 
@@ -62,14 +75,14 @@ def main_func(update, context):
             assignment.end_position = employee_geo_position
             assignment.save()
             context.bot.send_message(chat_id=chat.id, text='Спасибо за отметку, ваши данные записаны и отправлены работодателю.')
+        else:
+            context.bot.send_message(chat_id=chat.id, text='Все заполнено, отвали.')
 
         return
 
 
 def start(update, context):
     chat = update.effective_chat
-    if not Employee.objects.filter(chat_id=chat.id):
-        Employee.objects.create(chat_id=chat.id)
     name = update.message.chat.first_name
     phone_button = KeyboardButton(text='Отправить номер телефона', request_contact=True)
     context.bot.send_message(chat_id=chat.id,
