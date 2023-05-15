@@ -3,9 +3,9 @@ import os
 from telegram import Bot, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from dotenv import load_dotenv
-from django.http import HttpResponse
 
-from .models import Employee
+from .models import Employee, JobRequestAssignment, EmployeeGeoPosition
+from django.db.models import Q
 
 load_dotenv()
 
@@ -23,19 +23,47 @@ def main_func(update, context):
                                  text=f'Пожалуйста, отправьте мне свой номер телефона для регистрации '
                                       f'(кнопка "Отправить номер телефона")',
                                  reply_markup=ReplyKeyboardMarkup([[phone_button]]))
+        return
 
-    context.bot.send_message(chat_id=chat.id, text='Спасибо, что поделились номером телефона!\n'
-                                                   'Для начала смены нажмите кнопку "Начать смену"')
-    phone_number = update.message.contact.phone_number
-    employee = Employee.objects.filter(chat_id=chat.id)
-    employee.phone_number = phone_number
-    location_button = KeyboardButton(text='Отправить координаты', request_location=True)
-    context.bot.send_message(chat_id=chat.id,
-                             text=f'Спасибо, мы записали ваши данные о начале смены.\n'
-                                  f'Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
-                             reply_markup=ReplyKeyboardMarkup([[location_button]]))
+    if hasattr(update, 'message') and hasattr(update.message, 'contact') and hasattr(update.message.contact, 'phone_number'):
+        phone_number = update.message.contact.phone_number
+        employee = Employee.objects.get(chat_id=chat.id)
+        employee.phone_number = phone_number
+        employee.save()
+        location_button = KeyboardButton(text='Начать смену', request_location=True)
+        context.bot.send_message(chat_id=chat.id, text='Спасибо, что поделились номером телефона!\n'
+                                                       'Для начала смены нажмите кнопку "Начать смену"',
+                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+        return
 
-    return HttpResponse()
+    if hasattr(update, 'message') and hasattr(update.message, 'location'):
+
+        employee = Employee.objects.get(chat_id=chat.id)
+        # TODO ensure its today's assignment
+        assignment = JobRequestAssignment.objects.get(employee=employee)
+
+        if assignment.start_position is None:
+            geo_position = update.message.location
+            employee_geo_position = EmployeeGeoPosition.objects.create(
+                employee=employee, latitude=geo_position['latitude'],
+                longitude=geo_position['longitude'])
+            assignment.start_position = employee_geo_position
+            assignment.save()
+            location_button = KeyboardButton(text='Закончить смену', request_location=True)
+            context.bot.send_message(chat_id=chat.id,
+                                     text=f'Спасибо, мы записали ваши данные о начале смены.\n'
+                                          f'Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
+                                     reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+        elif assignment.end_position is None:
+            geo_position = update.message.location
+            employee_geo_position = EmployeeGeoPosition.objects.create(
+                employee=employee, latitude=geo_position['latitude'],
+                longitude=geo_position['longitude'])
+            assignment.end_position = employee_geo_position
+            assignment.save()
+            context.bot.send_message(chat_id=chat.id, text='Спасибо за отметку, ваши данные записаны и отправлены работодателю.')
+
+        return
 
 
 def start(update, context):
@@ -44,13 +72,10 @@ def start(update, context):
         Employee.objects.create(chat_id=chat.id)
     name = update.message.chat.first_name
     phone_button = KeyboardButton(text='Отправить номер телефона', request_contact=True)
-    # start_shift_button = KeyboardButton(text='Начать смену')
-    # end_shift_button = KeyboardButton(text='Закончить смену')
-    # send_location_button = KeyboardButton(text='Отправить координаты', request_location=True)
     context.bot.send_message(chat_id=chat.id,
                              text=f'Спасибо, что включили меня, {name}!\n'
                                   f'Пожалуйста, отправьте мне свой номер телефона для регистрации '
-                                  f'(кнопка "Отправить номер телефона")', reply_markup=ReplyKeyboardMarkup([[phone_button]]))
+                                  f'(кнопка "Отправить номер телефона")', reply_markup=ReplyKeyboardMarkup([[phone_button]], one_time_keyboard=True))
 
 
 updater.dispatcher.add_handler(CommandHandler('start', start))
