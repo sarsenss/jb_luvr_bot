@@ -76,7 +76,7 @@ def main_func(update, context):
             assignment.save()
             context.bot.send_message(chat_id=chat.id, text='Спасибо за отметку, ваши данные записаны и отправлены работодателю.')
         else:
-            context.bot.send_message(chat_id=chat.id, text='Все заполнено, отвали.')
+            context.bot.send_message(chat_id=chat.id, text='Все уже заполнено, спасибо!')
 
         return
 
