@@ -60,6 +60,14 @@ class JobRequest(models.Model):
     def __str__(self):
         return f'{self.request_type} - {self.branch}'
 
+    # def is_good_date(self, request_date_time, tolerance_minutes=30):
+    #     for date in [self.date_start, ..., self.date_end]:
+    #         shift_start = date + self.shift_time_start
+    #         shift_end = date + self.shift_time_end
+    #         if abs(shift_start - request_date_time) < tolerance_minutes or abs(shift_end - request_date_time) < tolerance_minutes:
+    #             return True
+    #     return False
+
 
 class JobRequestAssignment(models.Model):
     job_request = models.ForeignKey(JobRequest, on_delete=models.CASCADE, related_name='assignments',
