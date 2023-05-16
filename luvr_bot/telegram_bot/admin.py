@@ -8,7 +8,7 @@ class EmployeeAdmin(admin.ModelAdmin):
 
 
 class EmployeeGeoPositionAdmin(admin.ModelAdmin):
-    list_display = ('employee', 'latitude', 'longitude',)
+    list_display = ('employee', 'latitude', 'longitude', 'geo_positions_date', )
 
 
 class BranchAdmin(admin.ModelAdmin):
