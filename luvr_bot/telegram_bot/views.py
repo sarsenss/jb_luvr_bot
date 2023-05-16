@@ -45,9 +45,9 @@ def main_func(update, context):
 
         employee = Employee.objects.get(chat_id=chat.id)
 
-        # TODO to handle assignment not exist error
+        #TODO to handle assignment not exist error
 
-        if not JobRequestAssignment.objects.get(employee=employee).exists():
+        if not JobRequestAssignment.objects.filter(employee=employee).exists():
             context.bot.send_message(chat_id=chat.id, text='Для вас не была назначена заявка на смену.'
                                                            '\nОбратитесь к менеджеру.')
             return
