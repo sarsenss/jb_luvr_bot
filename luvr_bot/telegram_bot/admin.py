@@ -16,7 +16,7 @@ class BranchAdmin(admin.ModelAdmin):
 
 
 class JobRequestAdmin(admin.ModelAdmin):
-    list_display = ('branch', 'employee_position', 'request_type', 'date_start', 'date_end', 'shift_date', 'shift_time_start',
+    list_display = ('branch', 'employee_position', 'request_type', 'date_start', 'date_end', 'shift_time_start',
                     'shift_time_end', 'number_of_employees', 'request_comment',)
 
 

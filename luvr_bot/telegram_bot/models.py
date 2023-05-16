@@ -45,11 +45,11 @@ class JobRequest(models.Model):
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='job_requests')
     employee_position = models.CharField(blank=True, null=True, max_length=300, verbose_name='должность')
     request_type = models.CharField(blank=True, null=True, max_length=250, verbose_name='тип заявки')
+    #TODO set date_start and date_end as shift_date when importing
     date_start = models.DateField(blank=True, null=True, verbose_name='дата начала периода')
     date_end = models.DateField(blank=True, null=True, verbose_name='дата окончания периода')
-    shift_date = models.DateField(blank=True, null=True, verbose_name='дата смены')
-    shift_time_start = models.CharField(max_length=150, blank=True, null=True, verbose_name='время начала смены')
-    shift_time_end = models.CharField(max_length=150, blank=True, null=True, verbose_name='время окончания смены')
+    shift_time_start = models.TimeField(blank=True, null=True, verbose_name='время начала смены')
+    shift_time_end = models.TimeField(blank=True, null=True, verbose_name='время окончания смены')
     number_of_employees = models.CharField(max_length=3, blank=True, null=True, verbose_name='количество сотрудников')
     request_comment = models.TextField(blank=True, null=True, verbose_name='комментарий')
 
