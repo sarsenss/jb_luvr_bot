@@ -70,6 +70,7 @@ class JobRequestAssignment(models.Model):
                                        related_name='start_assignments', verbose_name='начало смены')
     end_position = models.ForeignKey(EmployeeGeoPosition, on_delete=models.CASCADE, blank=True, null=True,
                                      related_name='end_assignments', verbose_name='окончание смены')
+    assignment_date = models.DateField(auto_now=True)
 
     class Meta:
         verbose_name = 'Назначение сотрудников'

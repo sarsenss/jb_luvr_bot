@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from telegram import Bot, KeyboardButton, ReplyKeyboardMarkup
@@ -6,6 +7,7 @@ from dotenv import load_dotenv
 
 from .models import Employee, JobRequestAssignment, EmployeeGeoPosition
 from geopy.distance import geodesic as GD
+from django.db.models import Q
 
 load_dotenv()
 
@@ -44,13 +46,13 @@ def main_func(update, context):
     if hasattr(update, 'message') and hasattr(update.message, 'location'):
         employee = Employee.objects.get(chat_id=chat.id)
         #TODO to handle assignment not exist error
-        if not JobRequestAssignment.objects.filter(employee=employee).exists():
+        if not JobRequestAssignment.objects.filter(Q(employee=employee) & Q(assignment_date=datetime.datetime.today())).exists():
             context.bot.send_message(chat_id=chat.id, text='Для вас не была назначена заявка на смену.'
                                                            '\nОбратитесь к менеджеру.')
             return
 
         # TODO ensure its today's assignment
-        assignment = JobRequestAssignment.objects.get(employee=employee)
+        assignment = JobRequestAssignment.objects.get(employee=employee, assignment_date=datetime.datetime.today())
 
         if assignment.start_position is None:
             geo_position = update.message.location

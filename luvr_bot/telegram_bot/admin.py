@@ -21,7 +21,7 @@ class JobRequestAdmin(admin.ModelAdmin):
 
 
 class JobRequestAssignmentAdmin(admin.ModelAdmin):
-    list_display = ('job_request', 'employee', 'start_position', 'end_position')
+    list_display = ('job_request', 'employee', 'start_position', 'end_position', 'assignment_date')
 
 
 admin.site.register(Employee, EmployeeAdmin)
