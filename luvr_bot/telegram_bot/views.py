@@ -5,7 +5,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from dotenv import load_dotenv
 
 from .models import Employee, JobRequestAssignment, EmployeeGeoPosition
-from django.db.models import Q
+from geopy.distance import geodesic as GD
 
 load_dotenv()
 
@@ -42,11 +42,8 @@ def main_func(update, context):
         return
 
     if hasattr(update, 'message') and hasattr(update.message, 'location'):
-
         employee = Employee.objects.get(chat_id=chat.id)
-
         #TODO to handle assignment not exist error
-
         if not JobRequestAssignment.objects.filter(employee=employee).exists():
             context.bot.send_message(chat_id=chat.id, text='Для вас не была назначена заявка на смену.'
                                                            '\nОбратитесь к менеджеру.')
@@ -62,6 +59,16 @@ def main_func(update, context):
                 longitude=geo_position['longitude'])
             assignment.start_position = employee_geo_position
             assignment.save()
+            branch = assignment.job_request.branch
+            distance = GD((branch.latitude, branch.longitude), (geo_position['latitude'], geo_position['longitude'])).meters
+
+            if distance > 500:
+                location_button = KeyboardButton(text='Начать смену', request_location=True)
+                context.bot.send_message(chat_id=chat.id, text='Вы находитесь не на территории филиала.'
+                                                               '\nПожалуйста, вернитесь в офис и отправьте геоданные еще раз',
+                                         reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+                return
+
             location_button = KeyboardButton(text='Закончить смену', request_location=True)
             context.bot.send_message(chat_id=chat.id,
                                      text=f'Спасибо, мы записали ваши данные о начале смены.\n'
@@ -74,6 +81,17 @@ def main_func(update, context):
                 longitude=geo_position['longitude'])
             assignment.end_position = employee_geo_position
             assignment.save()
+            branch = assignment.job_request.branch
+            distance = GD((branch.latitude, branch.longitude),
+                          (geo_position['latitude'], geo_position['longitude'])).meters
+
+            if distance > 500:
+                location_button = KeyboardButton(text='Закончить смену', request_location=True)
+                context.bot.send_message(chat_id=chat.id, text='Вы находитесь не на территории филиала.'
+                                                               '\nПожалуйста, вернитесь в офис и отправьте геоданные еще раз',
+                                         reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+                return
+
             context.bot.send_message(chat_id=chat.id, text='Спасибо за отметку, ваши данные записаны и отправлены работодателю.')
         else:
             context.bot.send_message(chat_id=chat.id, text='Все уже заполнено, спасибо!')
