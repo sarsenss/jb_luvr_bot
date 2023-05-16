@@ -29,7 +29,6 @@ def main_func(update, context):
         return
 
     if has_contact_in_message:
-        # TODO find employee by phone number. If exists - set chat_id and save. If not exists - create with chat_id and phone number
         phone_number = update.message.contact.phone_number
         if Employee.objects.filter(phone_number=phone_number).exists():
             employee = Employee.objects.get(phone_number=phone_number)
@@ -43,24 +42,32 @@ def main_func(update, context):
                                  reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
         return
 
-    if hasattr(update, 'message') and hasattr(update.message, 'location'):
-        employee = Employee.objects.get(chat_id=chat.id)
-        #TODO to handle assignment not exist error
-        if not JobRequestAssignment.objects.filter(Q(employee=employee) & Q(assignment_date=datetime.datetime.today())).exists():
-            context.bot.send_message(chat_id=chat.id, text='Для вас не была назначена заявка на смену.'
-                                                           '\nОбратитесь к менеджеру.')
-            return
+    employee = Employee.objects.get(chat_id=chat.id)
+    telegram_message_date = datetime.datetime.today().date()
+    # search_date_start = telegram_message_date - 1 day
+    # search_date_end = telegram_message_date + 1 day
+    # filter_condition = Q(employee=employee) & (Q(job_request__date_start__lte=search_date_start) & Q(job_request__date_end__gte=search_date_end))
+    # possible_assignments = [];
+    # assignment = None
+    # for possible_assignment in possible_assignments :
+    #     if possible_assignment.is_good_time(telegram_message_date):
+    #         assignment = possible_assignment
+    filter_condition = Q(employee=employee) & (Q(job_request__date_start__lte=telegram_message_date) & Q(job_request__date_end__gte=telegram_message_date))
+    # TODO handle situation when registering 30 minutes before shift start and 30 minutes after shift
+    if not JobRequestAssignment.objects.filter(filter_condition).exists():
+        context.bot.send_message(chat_id=chat.id, text='Для вас не была назначена заявка на смену.'
+                                                       '\nОбратитесь к менеджеру.')
+        return
 
-        # TODO ensure its today's assignment
-        assignment = JobRequestAssignment.objects.get(employee=employee, assignment_date=datetime.datetime.today())
+    assignment = JobRequestAssignment.objects.filter(filter_condition).first()
+
+    if hasattr(update, 'message') and hasattr(update.message, 'location') and update.message.location:
+        geo_position = update.message.location
+        employee_geo_position = EmployeeGeoPosition.objects.create(
+            employee=employee, latitude=geo_position['latitude'],
+            longitude=geo_position['longitude'])
 
         if assignment.start_position is None:
-            geo_position = update.message.location
-            employee_geo_position = EmployeeGeoPosition.objects.create(
-                employee=employee, latitude=geo_position['latitude'],
-                longitude=geo_position['longitude'])
-            assignment.start_position = employee_geo_position
-            assignment.save()
             branch = assignment.job_request.branch
             distance = GD((branch.latitude, branch.longitude), (geo_position['latitude'], geo_position['longitude'])).meters
 
@@ -70,19 +77,13 @@ def main_func(update, context):
                                                                '\nПожалуйста, вернитесь в офис и отправьте геоданные еще раз',
                                          reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
                 return
-
+            assignment.start_position = employee_geo_position
+            assignment.save()
             location_button = KeyboardButton(text='Закончить смену', request_location=True)
             context.bot.send_message(chat_id=chat.id,
-                                     text=f'Спасибо, мы записали ваши данные о начале смены.\n'
-                                          f'Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
+                                     text='Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
                                      reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
         elif assignment.end_position is None:
-            geo_position = update.message.location
-            employee_geo_position = EmployeeGeoPosition.objects.create(
-                employee=employee, latitude=geo_position['latitude'],
-                longitude=geo_position['longitude'])
-            assignment.end_position = employee_geo_position
-            assignment.save()
             branch = assignment.job_request.branch
             distance = GD((branch.latitude, branch.longitude),
                           (geo_position['latitude'], geo_position['longitude'])).meters
@@ -94,21 +95,37 @@ def main_func(update, context):
                                          reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
                 return
 
+            assignment.end_position = employee_geo_position
+            assignment.save()
             context.bot.send_message(chat_id=chat.id, text='Спасибо за отметку, ваши данные записаны и отправлены работодателю.')
         else:
             context.bot.send_message(chat_id=chat.id, text='Все уже заполнено, спасибо!')
 
         return
 
+    # Fallback to unsupported message
+    elif assignment.start_position is None:
+        location_button = KeyboardButton(text='Начать смену', request_location=True)
+        context.bot.send_message(chat_id=chat.id,
+                                 text=f'Для начала смены нажмите кнопку "Начать смену"',
+                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+    elif assignment.end_position is None:
+        location_button = KeyboardButton(text='Закончить смену', request_location=True)
+        context.bot.send_message(chat_id=chat.id,
+                                 text=f'Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
+                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+    else:
+        context.bot.send_message(chat_id=chat.id,
+                                 text=f'Мы записали Ваши данные о начале и окончании смены',)
+    return
+
 
 def start(update, context):
     chat = update.effective_chat
     name = update.message.chat.first_name
-    phone_button = KeyboardButton(text='Отправить номер телефона', request_contact=True)
-    context.bot.send_message(chat_id=chat.id,
-                             text=f'Спасибо, что включили меня, {name}!\n'
-                                  f'Пожалуйста, отправьте мне свой номер телефона для регистрации '
-                                  f'(кнопка "Отправить номер телефона")', reply_markup=ReplyKeyboardMarkup([[phone_button]], one_time_keyboard=True))
+    context.bot.send_message(chat_id=chat.id, text=f'Спасибо, что включили меня, {name}!')
+
+    main_func(update, context)
 
 
 updater.dispatcher.add_handler(CommandHandler('start', start))
