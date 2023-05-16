@@ -17,6 +17,7 @@ class EmployeeGeoPosition(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='geo_positions', verbose_name='сотрудник')
     latitude = models.CharField(max_length=300, verbose_name='широта')
     longitude = models.CharField(max_length=300, verbose_name='долгота')
+    geo_positions_date = models.DateField(auto_now=True, verbose_name='дата внесения гео позиций')
 
     class Meta:
         verbose_name = 'Геопозиция сотрудника'
@@ -41,7 +42,6 @@ class Branch(models.Model):
 
 
 class JobRequest(models.Model):
-    # deal_id
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='job_requests')
     employee_position = models.CharField(blank=True, null=True, max_length=300, verbose_name='должность')
     request_type = models.CharField(blank=True, null=True, max_length=250, verbose_name='тип заявки')
@@ -70,7 +70,7 @@ class JobRequestAssignment(models.Model):
                                        related_name='start_assignments', verbose_name='начало смены')
     end_position = models.ForeignKey(EmployeeGeoPosition, on_delete=models.CASCADE, blank=True, null=True,
                                      related_name='end_assignments', verbose_name='окончание смены')
-    assignment_date = models.DateField(auto_now=True)
+    assignment_date = models.DateField(auto_now=True, verbose_name='дата назначения')
 
     class Meta:
         verbose_name = 'Назначение сотрудников'
