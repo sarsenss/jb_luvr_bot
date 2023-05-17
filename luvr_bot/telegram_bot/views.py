@@ -52,17 +52,14 @@ def main_func(update, context):
     for possible_assignment in possible_assignments:
         if possible_assignment.job_request.is_shift_includes_time(telegram_message_date):
             if assignment is not None:
-                # todo две работы на одного и того же сотружника в одно и то же время не должно быть
-                # send message (Обратитесь к менеджеру, у вас несколько назначений на это время)
+                context.bot.send_message(chat_id=chat.id, text='У вас несколько назначений на этот день.'
+                                                               '\nОбратитесь к менеджеру.')
                 return
             assignment = possible_assignment
-            break
     if assignment is None:
         context.bot.send_message(chat_id=chat.id, text='Для вас не была назначена заявка на смену.'
                                                        '\nОбратитесь к менеджеру.')
         return
-
-    assignment = JobRequestAssignment.objects.filter(filter_condition).first()
 
     if hasattr(update, 'message') and hasattr(update.message, 'location') and update.message.location:
         geo_position = update.message.location
