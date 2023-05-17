@@ -1,3 +1,6 @@
+import datetime
+from datetime import timedelta
+
 from django.db import models
 
 
@@ -60,13 +63,20 @@ class JobRequest(models.Model):
     def __str__(self):
         return f'{self.request_type} - {self.branch}'
 
-    # def is_good_date(self, request_date_time, tolerance_minutes=30):
-    #     for date in [self.date_start, ..., self.date_end]:
-    #         shift_start = date + self.shift_time_start
-    #         shift_end = date + self.shift_time_end
-    #         if abs(shift_start - request_date_time) < tolerance_minutes or abs(shift_end - request_date_time) < tolerance_minutes:
-    #             return True
-    #     return False
+    def is_shift_includes_time(self, request_date_time, tolerance_minutes=30):
+        dates = []
+        delta = timedelta(days=1)
+        start_date = self.date_start
+        while start_date <= self.date_end:
+            dates.append(start_date)
+            start_date += delta
+
+        for date in dates:
+            shift_start = datetime.datetime.combine(date, self.shift_time_start) - timedelta(minutes=tolerance_minutes)
+            shift_end = datetime.datetime.combine(date, self.shift_time_end) + timedelta(minutes=tolerance_minutes)
+            if shift_start <= request_date_time <= shift_end:
+                return True
+        return False
 
 
 class JobRequestAssignment(models.Model):
