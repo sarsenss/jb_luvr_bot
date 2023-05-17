@@ -43,18 +43,21 @@ def main_func(update, context):
         return
 
     employee = Employee.objects.get(chat_id=chat.id)
-    telegram_message_date = datetime.datetime.today().date()
-    # search_date_start = telegram_message_date - 1 day
-    # search_date_end = telegram_message_date + 1 day
-    # filter_condition = Q(employee=employee) & (Q(job_request__date_start__lte=search_date_start) & Q(job_request__date_end__gte=search_date_end))
-    # possible_assignments = [];
-    # assignment = None
-    # for possible_assignment in possible_assignments :
-    #     if possible_assignment.is_good_time(telegram_message_date):
-    #         assignment = possible_assignment
-    filter_condition = Q(employee=employee) & (Q(job_request__date_start__lte=telegram_message_date) & Q(job_request__date_end__gte=telegram_message_date))
-    # TODO handle situation when registering 30 minutes before shift start and 30 minutes after shift
-    if not JobRequestAssignment.objects.filter(filter_condition).exists():
+    telegram_message_date = datetime.datetime.today()
+    search_date_start = telegram_message_date - datetime.timedelta(days=1)
+    search_date_end = telegram_message_date + datetime.timedelta(days=1)
+    filter_condition = Q(employee=employee) & (Q(job_request__date_start__lte=search_date_start) & Q(job_request__date_end__gte=search_date_end))
+    possible_assignments = JobRequestAssignment.objects.filter(filter_condition).all()
+    assignment = None
+    for possible_assignment in possible_assignments:
+        if possible_assignment.job_request.is_shift_includes_time(telegram_message_date):
+            if assignment is not None:
+                # todo две работы на одного и того же сотружника в одно и то же время не должно быть
+                # send message (Обратитесь к менеджеру, у вас несколько назначений на это время)
+                return
+            assignment = possible_assignment
+            break
+    if assignment is None:
         context.bot.send_message(chat_id=chat.id, text='Для вас не была назначена заявка на смену.'
                                                        '\nОбратитесь к менеджеру.')
         return
