@@ -25,7 +25,7 @@ def main_func(update, context):
         context.bot.send_message(chat_id=chat.id,
                                  text=f'Пожалуйста, отправьте мне свой номер телефона для регистрации '
                                       f'(кнопка "Отправить номер телефона")',
-                                 reply_markup=ReplyKeyboardMarkup([[phone_button]]))
+                                 reply_markup=ReplyKeyboardMarkup([[phone_button]], resize_keyboard=True))
         return
 
     if has_contact_in_message:
@@ -39,7 +39,8 @@ def main_func(update, context):
         location_button = KeyboardButton(text='Начать смену', request_location=True)
         context.bot.send_message(chat_id=chat.id, text='Спасибо, что поделились номером телефона!\n'
                                                        'Для начала смены нажмите кнопку "Начать смену"',
-                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
+                                                                  resize_keyboard=True))
         return
 
     employee = Employee.objects.get(chat_id=chat.id)
@@ -75,14 +76,16 @@ def main_func(update, context):
                 location_button = KeyboardButton(text='Начать смену', request_location=True)
                 context.bot.send_message(chat_id=chat.id, text='Вы находитесь не на территории филиала.'
                                                                '\nПожалуйста, вернитесь в офис и отправьте геоданные еще раз',
-                                         reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+                                         reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
+                                                                          resize_keyboard=True))
                 return
             assignment.start_position = employee_geo_position
             assignment.save()
             location_button = KeyboardButton(text='Закончить смену', request_location=True)
             context.bot.send_message(chat_id=chat.id,
                                      text='Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
-                                     reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+                                     reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
+                                                                      resize_keyboard=True))
         elif assignment.end_position is None:
             branch = assignment.job_request.branch
             distance = GD((branch.latitude, branch.longitude),
@@ -92,7 +95,8 @@ def main_func(update, context):
                 location_button = KeyboardButton(text='Закончить смену', request_location=True)
                 context.bot.send_message(chat_id=chat.id, text='Вы находитесь не на территории филиала.'
                                                                '\nПожалуйста, вернитесь в офис и отправьте геоданные еще раз',
-                                         reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+                                         reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
+                                                                          resize_keyboard=True))
                 return
 
             assignment.end_position = employee_geo_position
@@ -108,12 +112,14 @@ def main_func(update, context):
         location_button = KeyboardButton(text='Начать смену', request_location=True)
         context.bot.send_message(chat_id=chat.id,
                                  text=f'Для начала смены нажмите кнопку "Начать смену"',
-                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
+                                                                  resize_keyboard=True))
     elif assignment.end_position is None:
         location_button = KeyboardButton(text='Закончить смену', request_location=True)
         context.bot.send_message(chat_id=chat.id,
                                  text=f'Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
-                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True))
+                                 reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
+                                                                  resize_keyboard=True))
     else:
         context.bot.send_message(chat_id=chat.id,
                                  text=f'Мы записали Ваши данные о начале и окончании смены',)
