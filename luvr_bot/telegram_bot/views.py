@@ -83,7 +83,10 @@ def main_func(update, context):
             assignment.save()
             location_button = KeyboardButton(text='Закончить смену', request_location=True)
             context.bot.send_message(chat_id=chat.id,
-                                     text='Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
+                                     text='Не забудьте завершить смену, нажав на кнопку "Закончить смену"')
+
+            context.bot.send_message(chat_id=chat.id,
+                                     text='Вы уверены, что хотите закончить смену?',
                                      reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
                                                                       resize_keyboard=True))
         elif assignment.end_position is None:
