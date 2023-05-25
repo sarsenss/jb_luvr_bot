@@ -45,8 +45,8 @@ def main_func(update, context):
 
     employee = Employee.objects.get(chat_id=chat.id)
     telegram_message_date = datetime.datetime.today()
-    search_date_start = telegram_message_date - datetime.timedelta(days=1)
-    search_date_end = telegram_message_date + datetime.timedelta(days=1)
+    search_date_start = telegram_message_date + datetime.timedelta(days=1)
+    search_date_end = telegram_message_date - datetime.timedelta(days=1)
     filter_condition = Q(employee=employee) & (Q(job_request__date_start__lte=search_date_start) & Q(job_request__date_end__gte=search_date_end))
     possible_assignments = JobRequestAssignment.objects.filter(filter_condition).all()
     assignment = None
