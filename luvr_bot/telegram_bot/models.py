@@ -46,11 +46,24 @@ class EmployeeGeoPosition(models.Model):
         return f'{self.latitude} - {self.longitude}'
 
 
+class Company(models.Model):
+    name = models.CharField(max_length=250,  verbose_name='название компании')
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = 'Компания'
+        verbose_name_plural = 'Компании'
+
+
 class Branch(models.Model):
     branch_name = models.CharField(max_length=250,  verbose_name='название филиала')
     latitude = models.CharField(max_length=300,  verbose_name='широта')
     longitude = models.CharField(max_length=300,  verbose_name='долгота')
     address = models.CharField(max_length=300, verbose_name='адрес', blank=True, null=True)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='brances', verbose_name='компания',
+                                blank=True, null=True)
 
     class Meta:
         verbose_name = 'Филиал'
@@ -64,7 +77,8 @@ class JobRequest(models.Model):
     STATUSES = [
         ('APPROVED', 'Принята'),
         ('REJECTED', 'Отклонена'),
-        ('CANCELED', 'Отменена')
+        ('CANCELED', 'Отменена'),
+        ('CLOSED', 'Закрыта')
     ]
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='job_requests', verbose_name='филиал')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='job_requests', verbose_name='сотрудник',
@@ -78,13 +92,15 @@ class JobRequest(models.Model):
     shift_time_end = models.TimeField(blank=True, null=True, verbose_name='время окончания смены')
     number_of_employees = models.CharField(max_length=3, blank=True, null=True, verbose_name='количество сотрудников')
     request_comment = models.TextField(blank=True, null=True, verbose_name='комментарий')
+    message_text = models.TextField(blank=True, null=True, verbose_name='текст рассылки')
+    request_date = models.DateTimeField(auto_now=True, verbose_name='дата заявки')
 
     class Meta:
         verbose_name = 'Заявка на сотрудников'
         verbose_name_plural = 'Заявки на сотрудников'
 
     def __str__(self):
-        return f'{self.branch}'
+        return f'Заявка от {self.request_date}'
 
     def is_shift_includes_time(self, request_date_time, tolerance_minutes=30):
         dates = []
@@ -118,6 +134,9 @@ class JobRequestAssignment(models.Model):
         verbose_name = 'Назначение сотрудников'
         verbose_name_plural = 'Назначения сотрудников'
 
+    def __str__(self):
+        return f'Назначение от {self.assignment_date}'
+
 
 class Shift(models.Model):
     start_position = models.ForeignKey(EmployeeGeoPosition, on_delete=models.CASCADE, blank=True, null=True,
@@ -131,3 +150,6 @@ class Shift(models.Model):
     class Meta:
         verbose_name = 'Смена'
         verbose_name_plural = 'Смены'
+
+    def __str__(self):
+        return f'Смена от {self.shift_date}'
