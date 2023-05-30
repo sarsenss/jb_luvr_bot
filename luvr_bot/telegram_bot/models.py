@@ -1,12 +1,28 @@
 import datetime
 from datetime import timedelta
+from django.contrib.auth.models import AbstractUser
 
 from django.db import models
+
+
+class CustomUser(AbstractUser):
+    ADMIN = 1
+    CHAIN_MANAGER = 2
+    BRANCH_MANAGER = 3
+
+    ROLE_CHOICES = (
+        (ADMIN, 'Admin'),
+        (BRANCH_MANAGER, 'Branch manager'),
+        (CHAIN_MANAGER, 'Chain manager')
+    )
+    role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, blank=True, null=True)
 
 
 class Employee(models.Model):
     phone_number = models.CharField(max_length=250, verbose_name='номер телефона')
     chat_id = models.IntegerField(verbose_name='ID телеграм чата', blank=True, null=True)
+    INN = models.CharField(max_length=12, verbose_name='ИНН сотрудника', null=True, blank=True)
+    full_name = models.CharField(max_length=12, verbose_name='ФИО сотрудника', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Сотрудник'
@@ -20,7 +36,7 @@ class EmployeeGeoPosition(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='geo_positions', verbose_name='сотрудник')
     latitude = models.CharField(max_length=300, verbose_name='широта')
     longitude = models.CharField(max_length=300, verbose_name='долгота')
-    geo_positions_date = models.DateField(auto_now=True, verbose_name='дата внесения гео позиций')
+    geo_positions_date = models.DateTimeField(auto_now=True, verbose_name='дата внесения гео позиций')
 
     class Meta:
         verbose_name = 'Геопозиция сотрудника'
@@ -45,10 +61,17 @@ class Branch(models.Model):
 
 
 class JobRequest(models.Model):
-    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='job_requests')
+    STATUSES = [
+        ('APPROVED', 'Принята'),
+        ('REJECTED', 'Отклонена'),
+        ('CANCELED', 'Отменена')
+    ]
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='job_requests', verbose_name='филиал')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='job_requests', verbose_name='сотрудник',
+                                 blank=True, null=True)
+    status = models.CharField(max_length=250, choices=STATUSES, blank=True, null=True, verbose_name='статус заявки')
     employee_position = models.CharField(blank=True, null=True, max_length=300, verbose_name='должность')
     request_type = models.CharField(blank=True, null=True, max_length=250, verbose_name='тип заявки')
-    #TODO set date_start and date_end as shift_date when importing
     date_start = models.DateField(blank=True, null=True, verbose_name='дата начала периода')
     date_end = models.DateField(blank=True, null=True, verbose_name='дата окончания периода')
     shift_time_start = models.TimeField(blank=True, null=True, verbose_name='время начала смены')
@@ -61,7 +84,7 @@ class JobRequest(models.Model):
         verbose_name_plural = 'Заявки на сотрудников'
 
     def __str__(self):
-        return f'{self.request_type} - {self.branch}'
+        return f'{self.branch}'
 
     def is_shift_includes_time(self, request_date_time, tolerance_minutes=30):
         dates = []
@@ -80,16 +103,31 @@ class JobRequest(models.Model):
 
 
 class JobRequestAssignment(models.Model):
+    STATUSES = [
+        ('ADMITTED', 'Подтверждено'),
+        ('NOT ADMITTED', 'Неподтверждено'),
+    ]
     job_request = models.ForeignKey(JobRequest, on_delete=models.CASCADE, related_name='assignments',
                                     verbose_name='заявка на сотрудника')
+    status = models.CharField(max_length=250, choices=STATUSES, blank=True, null=True, verbose_name='статус назначения')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='assignments',
                                  verbose_name='сотрудник')
-    start_position = models.ForeignKey(EmployeeGeoPosition, on_delete=models.CASCADE, blank=True, null=True,
-                                       related_name='start_assignments', verbose_name='начало смены')
-    end_position = models.ForeignKey(EmployeeGeoPosition, on_delete=models.CASCADE, blank=True, null=True,
-                                     related_name='end_assignments', verbose_name='окончание смены')
-    assignment_date = models.DateField(auto_now=True, verbose_name='дата назначения')
+    assignment_date = models.DateTimeField(auto_now=True, verbose_name='дата назначения')
 
     class Meta:
         verbose_name = 'Назначение сотрудников'
         verbose_name_plural = 'Назначения сотрудников'
+
+
+class Shift(models.Model):
+    start_position = models.ForeignKey(EmployeeGeoPosition, on_delete=models.CASCADE, blank=True, null=True,
+                                       related_name='start_assignments', verbose_name='начало смены')
+    end_position = models.ForeignKey(EmployeeGeoPosition, on_delete=models.CASCADE, blank=True, null=True,
+                                     related_name='end_assignments', verbose_name='окончание смены')
+    shift_date = models.DateTimeField(auto_now=True, verbose_name='дата смены')
+    assignment = models.ForeignKey(JobRequestAssignment, on_delete=models.CASCADE, related_name='shifts',
+                                   verbose_name='назначение')
+
+    class Meta:
+        verbose_name = 'Смена'
+        verbose_name_plural = 'Смены'
