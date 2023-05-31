@@ -94,6 +94,7 @@ class JobRequest(models.Model):
     request_comment = models.TextField(blank=True, null=True, verbose_name='комментарий')
     message_text = models.TextField(blank=True, null=True, verbose_name='текст рассылки')
     request_date = models.DateTimeField(auto_now=True, verbose_name='дата заявки')
+    last_notified_date = models.DateField(blank=True, null=True, verbose_name='дата последнего уведомления')
 
     class Meta:
         verbose_name = 'Заявка на сотрудников'
@@ -145,7 +146,7 @@ class Shift(models.Model):
                                        related_name='start_assignments', verbose_name='начало смены')
     end_position = models.ForeignKey(EmployeeGeoPosition, on_delete=models.CASCADE, blank=True, null=True,
                                      related_name='end_assignments', verbose_name='окончание смены')
-    shift_date = models.DateTimeField(auto_now=True, verbose_name='дата смены')
+    shift_date = models.DateField(auto_now=True, verbose_name='дата смены')
     assignment = models.ForeignKey(JobRequestAssignment, on_delete=models.CASCADE, related_name='shifts',
                                    verbose_name='назначение')
 

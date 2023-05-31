@@ -31,7 +31,7 @@ class BranchAdmin(admin.ModelAdmin):
 class JobRequestAdmin(admin.ModelAdmin):
     list_display = ('branch', 'employee_position', 'request_type', 'date_start', 'date_end', 'shift_time_start',
                     'shift_time_end', 'number_of_employees', 'request_comment', 'employee', 'status', 'message_text',
-                    'request_date')
+                    'request_date', 'last_notified_date')
     inlines = [JobRequestAssignmentInline]
 
 
