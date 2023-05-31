@@ -5,7 +5,7 @@ from telegram import Bot, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from dotenv import load_dotenv
 
-from .models import Employee, JobRequestAssignment, EmployeeGeoPosition
+from .models import Employee, JobRequestAssignment, EmployeeGeoPosition, Shift
 from geopy.distance import geodesic as GD
 from django.db.models import Q
 
@@ -50,6 +50,7 @@ def main_func(update, context):
     filter_condition = Q(employee=employee) & (Q(job_request__date_start__lte=search_date_start) & Q(job_request__date_end__gte=search_date_end))
     possible_assignments = JobRequestAssignment.objects.filter(filter_condition).all()
     assignment = None
+
     for possible_assignment in possible_assignments:
         if possible_assignment.job_request.is_shift_includes_time(telegram_message_date):
             if assignment is not None:
@@ -62,13 +63,17 @@ def main_func(update, context):
                                                        '\nОбратитесь к менеджеру.')
         return
 
+    shift = Shift.objects.filter(Q(assignment=assignment) & Q(shift_date=datetime.datetime.today())).first()
+    if not shift:
+        shift = Shift.objects.create(assignment=assignment)
+
     if hasattr(update, 'message') and hasattr(update.message, 'location') and update.message.location:
         geo_position = update.message.location
         employee_geo_position = EmployeeGeoPosition.objects.create(
             employee=employee, latitude=geo_position['latitude'],
             longitude=geo_position['longitude'])
 
-        if assignment.start_position is None:
+        if shift.start_position is None:
             branch = assignment.job_request.branch
             distance = GD((branch.latitude, branch.longitude), (geo_position['latitude'], geo_position['longitude'])).meters
 
@@ -79,17 +84,15 @@ def main_func(update, context):
                                          reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
                                                                           resize_keyboard=True))
                 return
-            assignment.start_position = employee_geo_position
-            assignment.save()
+            shift.start_position = employee_geo_position
+            shift.save()
             location_button = KeyboardButton(text='Закончить смену', request_location=True)
             context.bot.send_message(chat_id=chat.id,
-                                     text='Не забудьте завершить смену, нажав на кнопку "Закончить смену"')
-
-            context.bot.send_message(chat_id=chat.id,
-                                     text='Вы уверены, что хотите закончить смену?',
+                                     text='Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
                                      reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
-                                                                      resize_keyboard=True))
-        elif assignment.end_position is None:
+                                                                      resize_keyboard=True)
+                                     )
+        elif shift.end_position is None:
             branch = assignment.job_request.branch
             distance = GD((branch.latitude, branch.longitude),
                           (geo_position['latitude'], geo_position['longitude'])).meters
@@ -102,22 +105,23 @@ def main_func(update, context):
                                                                           resize_keyboard=True))
                 return
 
-            assignment.end_position = employee_geo_position
-            assignment.save()
-            context.bot.send_message(chat_id=chat.id, text='Спасибо за отметку, ваши данные записаны и отправлены работодателю.')
+            shift.end_position = employee_geo_position
+            shift.save()
+            context.bot.send_message(chat_id=chat.id, text='Спасибо за отметку, ваши данные записаны и отправлены работодателю.',
+                                     reply_markup=ReplyKeyboardMarkup([[]]))
         else:
             context.bot.send_message(chat_id=chat.id, text='Все уже заполнено, спасибо!')
 
         return
 
     # Fallback to unsupported message
-    elif assignment.start_position is None:
+    elif shift.start_position is None:
         location_button = KeyboardButton(text='Начать смену', request_location=True)
         context.bot.send_message(chat_id=chat.id,
                                  text=f'Для начала смены нажмите кнопку "Начать смену"',
                                  reply_markup=ReplyKeyboardMarkup([[location_button]], one_time_keyboard=True,
                                                                   resize_keyboard=True))
-    elif assignment.end_position is None:
+    elif shift.end_position is None:
         location_button = KeyboardButton(text='Закончить смену', request_location=True)
         context.bot.send_message(chat_id=chat.id,
                                  text=f'Не забудьте завершить смену, нажав на кнопку "Закончить смену"',
