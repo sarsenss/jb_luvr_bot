@@ -41,7 +41,7 @@ class JobRequestAssignmentAdmin(admin.ModelAdmin):
 
 
 class ShiftAdmin(admin.ModelAdmin):
-    list_display = ('start_position', 'end_position', 'shift_date', 'assignment')
+    list_display = ('assignment', 'start_position', 'end_position', 'shift_date')
 
 
 class CompanyAdmin(admin.ModelAdmin):

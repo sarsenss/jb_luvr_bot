@@ -100,7 +100,8 @@ class JobRequest(models.Model):
         verbose_name_plural = 'Заявки на сотрудников'
 
     def __str__(self):
-        return f'Заявка от {self.request_date}'
+        date_str = datetime.datetime.strftime(self.request_date, '%d.%m.%Y %H:%M')
+        return f'Заявка от {date_str}'
 
     def is_shift_includes_time(self, request_date_time, tolerance_minutes=30):
         dates = []
@@ -135,7 +136,8 @@ class JobRequestAssignment(models.Model):
         verbose_name_plural = 'Назначения сотрудников'
 
     def __str__(self):
-        return f'Назначение от {self.assignment_date}'
+        date_str = datetime.datetime.strftime(self.assignment_date, '%d.%m.%Y %H:%M')
+        return f'Назначение от {date_str}'
 
 
 class Shift(models.Model):
@@ -152,4 +154,5 @@ class Shift(models.Model):
         verbose_name_plural = 'Смены'
 
     def __str__(self):
-        return f'Смена от {self.shift_date}'
+        date_str = datetime.datetime.strftime(self.shift_date, '%d.%m.%Y %H:%M')
+        return f'Смена от {date_str}'
